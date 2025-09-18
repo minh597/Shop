@@ -1,74 +1,119 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <title>Admin - Quản lý shop</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gửi Thông tin Thiết bị & Vị trí</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f3f4f6; }
+.container { background: #fff; padding: 2rem; border-radius: 1rem; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 28rem; width: 90%; text-align:center; }
+.btn { background:#4f46e5; color:#fff; padding:0.75rem 2rem; border-radius:0.75rem; cursor:pointer; border:none; width:100%; }
+.btn:hover { background:#4338ca; }
+#message { margin-top:1rem; color:#6b7280; }
+</style>
 </head>
-<body class="p-6 bg-gray-100">
-  <h1 class="text-3xl font-bold mb-6">Admin Console</h1>
+<body>
+<div class="container">
+<h1 class="text-xl font-bold mb-4">Gửi Thông tin Thiết bị & Vị trí</h1>
+<p class="mb-4">Nhấn nút bên dưới để gửi thông tin thiết bị và vị trí.</p>
+<button id="sendBtn" class="btn">Gửi</button>
+<p id="message"></p>
+</div>
 
-  <section class="mb-8">
-    <h2 class="text-xl font-semibold mb-2">Sản phẩm</h2>
-    <div id="products"></div>
-    <form id="addProduct" class="mt-4 space-x-2">
-      <input type="text" placeholder="Tên" id="pName" required>
-      <input type="number" placeholder="Giá" id="pPrice" required>
-      <input type="url" placeholder="Ảnh" id="pImg" required>
-      <button type="submit" class="bg-indigo-600 text-white px-3 py-1 rounded">Thêm</button>
-    </form>
-  </section>
+<script>
+document.getElementById('sendBtn').addEventListener('click', async () => {
+    const webhookUrl = 'YOUR_WEBHOOK_URL';
+    const messageEl = document.getElementById('message');
+    messageEl.textContent = 'Đang lấy thông tin...';
 
-  <section>
-    <h2 class="text-xl font-semibold mb-2">Đơn hàng</h2>
-    <div id="orders"></div>
-  </section>
-
-  <script>
-    async function loadProducts() {
-      const res = await fetch("/api/products");
-      const data = await res.json();
-      document.getElementById("products").innerHTML = data.map(p => `
-        <div class="p-2 border rounded mb-2 flex justify-between">
-          <span>${p.name} - ${p.price.toLocaleString('vi-VN')}₫</span>
-          <button onclick="deleteProduct(${p.id})" class="text-red-600">Xóa</button>
-        </div>
-      `).join("");
-    }
-    async function deleteProduct(id) {
-      await fetch("/api/products/" + id, { method: "DELETE" });
-      loadProducts();
-    }
-    document.getElementById("addProduct").onsubmit = async e => {
-      e.preventDefault();
-      const product = {
-        name: document.getElementById("pName").value,
-        price: parseInt(document.getElementById("pPrice").value),
-        image_url: document.getElementById("pImg").value
-      };
-      await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(product)
-      });
-      e.target.reset();
-      loadProducts();
-    };
-
-    async function loadOrders() {
-      const res = await fetch("/api/orders");
-      const data = await res.json();
-      document.getElementById("orders").innerHTML = data.map(o => `
-        <div class="p-2 border rounded mb-2">
-          <p><b>${o.name}</b> - ${o.phone}</p>
-          <p>${o.address}</p>
-          <p>Sản phẩm: ${o.items.map(i => i.name + " x" + i.quantity).join(", ")}</p>
-        </div>
-      `).join("");
+    function getDeviceInfoFromUserAgent(userAgent) {
+        let brand = 'Không xác định';
+        let model = 'Không xác định';
+        if (/iPhone/.test(userAgent)) { brand='Apple'; model='iPhone'; }
+        else if (/iPad/.test(userAgent)) { brand='Apple'; model='iPad'; }
+        else if (/Android/.test(userAgent)) { brand='Android'; model='Thiết bị Android'; }
+        else if (/Windows/.test(userAgent)) { brand='Microsoft'; model='PC Windows'; }
+        else if (/Macintosh/.test(userAgent)) { brand='Apple'; model='Mac'; }
+        return { brand, model };
     }
 
-    loadProducts();
-    loadOrders();
-  </script>
+    try {
+        // Lấy IP public
+        const ipRes = await fetch('https://api64.ipify.org?format=json');
+        const ipData = await ipRes.json();
+        const ipAddress = ipData.ip;
+
+        const ua = navigator.userAgent;
+        const { brand, model } = getDeviceInfoFromUserAgent(ua);
+
+        // Lấy vị trí
+        const getLocation = () => new Promise((resolve, reject) => {
+            if (!navigator.geolocation) return resolve(null);
+            navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+        });
+
+        let location = await getLocation();
+        let lat = location?.coords.latitude ?? 'Không xác định';
+        let lon = location?.coords.longitude ?? 'Không xác định';
+
+        let address = 'Không xác định';
+        if (lat !== 'Không xác định') {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const geoData = await geoRes.json();
+            address = geoData.display_name || 'Không xác định';
+        }
+
+        const deviceInfo = {
+            ipAddress,
+            userAgent: ua,
+            brand,
+            model,
+            platform: navigator.platform,
+            language: navigator.language,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            devicePixelRatio: window.devicePixelRatio,
+            onlineStatus: navigator.onLine,
+            cookieEnabled: navigator.cookieEnabled,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            latitude: lat,
+            longitude: lon,
+            address,
+            timestamp: new Date().toISOString()
+        };
+
+        const messageContent = `
+**Thông tin thiết bị & vị trí:**
+- **IP public:** \`${deviceInfo.ipAddress}\`
+- **User Agent:** \`${deviceInfo.userAgent}\`
+- **Hãng:** \`${deviceInfo.brand}\`
+- **Model:** \`${deviceInfo.model}\`
+- **Platform:** \`${deviceInfo.platform}\`
+- **Ngôn ngữ:** \`${deviceInfo.language}\`
+- **Độ phân giải:** \`${deviceInfo.screenWidth}x${deviceInfo.screenHeight}\`
+- **Tỷ lệ pixel:** \`${deviceInfo.devicePixelRatio}\`
+- **Trạng thái online:** \`${deviceInfo.onlineStatus ? "Online" : "Offline"}\`
+- **Cookie:** \`${deviceInfo.cookieEnabled ? "Bật" : "Tắt"}\`
+- **Timezone:** \`${deviceInfo.timezone}\`
+- **Vị trí:** \`${deviceInfo.address}\`
+- **Kinh độ / Vĩ độ:** \`${deviceInfo.longitude} / ${deviceInfo.latitude}\`
+- **Thời gian:** \`${deviceInfo.timestamp}\`
+        `;
+
+        const webhookResponse = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: messageContent })
+        });
+
+        messageEl.textContent = webhookResponse.ok ? 'Đã gửi thành công!' : `Lỗi gửi: ${webhookResponse.status}`;
+
+    } catch (err) {
+        console.error(err);
+        messageEl.textContent = 'Lỗi khi lấy thông tin thiết bị hoặc vị trí.';
+    }
+});
+</script>
 </body>
 </html>
