@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop Grow A Garden</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .product-card, .cart-section, .order-form {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">Cửa hàng Thời trang của bạn</h1>
+        <p class="mt-2 text-lg text-gray-600">Những món đồ yêu thích của bạn chỉ cách một cú nhấp chuột.</p>
+    </header>
+
+    <!-- Product Grid -->
+    <div class="container mx-auto">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Sản phẩm</h2>
+        <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <!-- Shopping Cart and Order Form Section -->
+    <div class="container mx-auto mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Cart Section -->
+        <div class="lg:col-span-2 p-6 cart-section">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Giỏ hàng</h2>
+            <div id="cart-items" class="space-y-4"></div>
+            <div id="cart-total" class="mt-6 pt-4 border-t border-gray-200 text-right font-bold text-lg text-gray-800">
+                Tổng cộng: 0₫
+            </div>
+        </div>
+
+        <!-- Order Form Section -->
+        <div class="p-6 order-form">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Thông tin đặt hàng</h2>
+            <form id="order-form" class="space-y-6">
+                <div>
+                    <label for="full-name" class="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+                    <input type="text" id="full-name" name="full-name" required class="w-full px-4 py-3 rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="email" name="email" required class="w-full px-4 py-3 rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                    <input type="tel" id="phone" name="phone" required class="w-full px-4 py-3 rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+                    <textarea id="address" name="address" rows="3" required class="w-full px-4 py-3 rounded-md border-gray-300 shadow-sm"></textarea>
+                </div>
+                <div>
+                    <button type="submit" class="w-full py-3 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                        Đặt hàng
+                    </button>
+                </div>
+            </form>
+            <div id="status-message" class="mt-4 p-3 rounded-md text-sm text-center hidden"></div>
+        </div>
+    </div>
+
+    <script>
+        let products = [];
+        let cart = [];
+
+        // Lấy danh sách sản phẩm từ backend
+        async function fetchProducts() {
+            const res = await fetch("/api/products");
+            products = await res.json();
+            renderProducts();
+        }
+
+        function renderProducts() {
+            const productGrid = document.getElementById('product-grid');
+            productGrid.innerHTML = products.map(product => `
+                <div class="product-card p-4 flex flex-col items-center text-center">
+                    <img src="${product.image_url}" alt="${product.name}" class="rounded-lg w-full h-auto object-cover mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">${product.name}</h3>
+                    <p class="text-sm text-gray-500 mt-1">${product.price.toLocaleString('vi-VN')}₫</p>
+                    <button onclick="addToCart(${product.id})" class="mt-4 w-full py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Thêm vào giỏ
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function renderCart() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartTotalElement = document.getElementById('cart-total');
+            let total = 0;
+
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center">Giỏ hàng của bạn đang trống.</p>';
+                cartTotalElement.textContent = 'Tổng cộng: 0₫';
+                return;
+            }
+
+            cartItemsContainer.innerHTML = cart.map(item => {
+                const product = products.find(p => p.id === item.id);
+                total += product.price * item.quantity;
+                return `
+                    <div class="flex items-center justify-between p-3 rounded-md bg-gray-50">
+                        <div class="flex items-center space-x-4">
+                            <img src="${product.image_url}" alt="${product.name}" class="w-12 h-12 rounded-md object-cover">
+                            <div>
+                                <h4 class="font-semibold text-gray-800">${product.name}</h4>
+                                <p class="text-sm text-gray-500">${product.price.toLocaleString('vi-VN')}₫ x ${item.quantity}</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-gray-800">${(product.price * item.quantity).toLocaleString('vi-VN')}₫</span>
+                    </div>
+                `;
+            }).join('');
+            
+            cartTotalElement.textContent = `Tổng cộng: ${total.toLocaleString('vi-VN')}₫`;
+        }
+
+        function addToCart(productId) {
+            const existingItem = cart.find(item => item.id === productId);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({ id: productId, quantity: 1 });
+            }
+            renderCart();
+        }
+
+        // Gửi đơn hàng về backend
+        const orderForm = document.getElementById('order-form');
+        const statusMessage = document.getElementById('status-message');
+
+        orderForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            if (cart.length === 0) {
+                statusMessage.textContent = 'Giỏ hàng trống. Vui lòng thêm sản phẩm.';
+                statusMessage.className = 'mt-4 p-3 rounded-md text-sm text-center bg-yellow-100 text-yellow-700 block';
+                return;
+            }
+
+            const formData = {
+                name: document.getElementById('full-name').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                items: cart.map(item => {
+                    const product = products.find(p => p.id === item.id);
+                    return { name: product.name, quantity: item.quantity, price: product.price };
+                })
+            };
+
+            try {
+                const res = await fetch("/api/orders", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(formData)
+                });
+
+                if (res.ok) {
+                    statusMessage.textContent = 'Đặt hàng thành công!';
+                    statusMessage.className = 'mt-4 p-3 rounded-md text-sm text-center bg-green-100 text-green-700 block';
+                    cart = [];
+                    renderCart();
+                    orderForm.reset();
+                } else {
+                    statusMessage.textContent = 'Đặt hàng thất bại!';
+                    statusMessage.className = 'mt-4 p-3 rounded-md text-sm text-center bg-red-100 text-red-700 block';
+                }
+            } catch (err) {
+                statusMessage.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+                statusMessage.className = 'mt-4 p-3 rounded-md text-sm text-center bg-red-100 text-red-700 block';
+            }
+        });
+
+        // Initial render
+        fetchProducts();
+        renderCart();
+    </script>
+</body>
+</html>
