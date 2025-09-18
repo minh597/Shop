@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - Quản lý shop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-6 bg-gray-100">
+  <h1 class="text-3xl font-bold mb-6">Admin Console</h1>
+
+  <section class="mb-8">
+    <h2 class="text-xl font-semibold mb-2">Sản phẩm</h2>
+    <div id="products"></div>
+    <form id="addProduct" class="mt-4 space-x-2">
+      <input type="text" placeholder="Tên" id="pName" required>
+      <input type="number" placeholder="Giá" id="pPrice" required>
+      <input type="url" placeholder="Ảnh" id="pImg" required>
+      <button type="submit" class="bg-indigo-600 text-white px-3 py-1 rounded">Thêm</button>
+    </form>
+  </section>
+
+  <section>
+    <h2 class="text-xl font-semibold mb-2">Đơn hàng</h2>
+    <div id="orders"></div>
+  </section>
+
+  <script>
+    async function loadProducts() {
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      document.getElementById("products").innerHTML = data.map(p => `
+        <div class="p-2 border rounded mb-2 flex justify-between">
+          <span>${p.name} - ${p.price.toLocaleString('vi-VN')}₫</span>
+          <button onclick="deleteProduct(${p.id})" class="text-red-600">Xóa</button>
+        </div>
+      `).join("");
+    }
+    async function deleteProduct(id) {
+      await fetch("/api/products/" + id, { method: "DELETE" });
+      loadProducts();
+    }
+    document.getElementById("addProduct").onsubmit = async e => {
+      e.preventDefault();
+      const product = {
+        name: document.getElementById("pName").value,
+        price: parseInt(document.getElementById("pPrice").value),
+        image_url: document.getElementById("pImg").value
+      };
+      await fetch("/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product)
+      });
+      e.target.reset();
+      loadProducts();
+    };
+
+    async function loadOrders() {
+      const res = await fetch("/api/orders");
+      const data = await res.json();
+      document.getElementById("orders").innerHTML = data.map(o => `
+        <div class="p-2 border rounded mb-2">
+          <p><b>${o.name}</b> - ${o.phone}</p>
+          <p>${o.address}</p>
+          <p>Sản phẩm: ${o.items.map(i => i.name + " x" + i.quantity).join(", ")}</p>
+        </div>
+      `).join("");
+    }
+
+    loadProducts();
+    loadOrders();
+  </script>
+</body>
+</html>
