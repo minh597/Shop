@@ -1,12 +1,78 @@
-{
-  "name": "my-backend",
-  "version": "1.0.0",
-  "description": "Backend test trên Render",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
-  }
-}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shop Online</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <!-- Header -->
+  <header class="bg-blue-600 text-white p-4 text-center text-xl font-bold">
+    🛒 Shop Online
+  </header>
+
+  <!-- Form đặt hàng -->
+  <main class="max-w-md mx-auto mt-10 bg-white p-6 rounded-2xl shadow-lg">
+    <h2 class="text-2xl font-bold mb-4">Đặt hàng</h2>
+    <form onsubmit="submitOrder(); return false;">
+      <div class="mb-4">
+        <label class="block font-medium">Tên khách hàng</label>
+        <input id="name" type="text" required class="w-full p-2 border rounded-lg">
+      </div>
+
+      <div class="mb-4">
+        <label class="block font-medium">Số điện thoại</label>
+        <input id="phone" type="tel" required class="w-full p-2 border rounded-lg">
+      </div>
+
+      <div class="mb-4">
+        <label class="block font-medium">Sản phẩm</label>
+        <select id="product" class="w-full p-2 border rounded-lg">
+          <option value="Áo thun">Áo thun</option>
+          <option value="Quần jean">Quần jean</option>
+          <option value="Giày sneaker">Giày sneaker</option>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="block font-medium">Giá (VND)</label>
+        <input id="price" type="number" required class="w-full p-2 border rounded-lg">
+      </div>
+
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+        Đặt hàng
+      </button>
+    </form>
+  </main>
+
+  <!-- Script xử lý -->
+  <script>
+    function submitOrder() {
+      const order = {
+        name: document.getElementById("name").value,
+        phone: document.getElementById("phone").value,
+        product: document.getElementById("product").value,
+        price: document.getElementById("price").value
+      };
+
+      fetch("https://shop-backend.onrender.com/order", { // ⚡ thay link backend Render của bạn
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(order)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert("✅ Đặt hàng thành công!");
+        console.log("Server:", data);
+      })
+      .catch(err => {
+        alert("❌ Lỗi kết nối server");
+        console.error("Error:", err);
+      });
+    }
+  </script>
+
+</body>
+</html>
